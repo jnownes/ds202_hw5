@@ -1,0 +1,57 @@
+---
+title: "Homework #5"
+author: "John Nownes"
+date: "4/10/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE)
+library(tidyr)
+library(lubridate)
+```
+
+## Liquor Sales in Iowa
+
+This dataset https://data.iowa.gov/Sales-Distribution/2019-Iowa-Liquor-Sales/38x4-vs5h contains the spirits purchase information of Iowa Class “E” liquor licensees by product and date of purchase for 2019. The dataset can be used to analyze total spirits sales in Iowa of individual products at the store level.
+
+**Submission instructions**: Create a folder named `ds202_hw5`, and name the RMarkDown file including your solutions `hw5.Rmd` under this folder. For the submission, create a GitHub repository named `ds202_hw5` under your GitHub account, and push both `hw5.Rmd` and the knitted `hw5.html` before the deadline. I will assume you use the same GitHub username as for your HW4 submission. The latest version of your homework appearing on GitHub before the deadline is graded. *It is crucial to follow the exact folder structure and file names*, so that your homework can be reproduced and graded by an automated script. This homework is **due on April 10** by 11:59 pm.
+
+1. The complete dataset is too large. Download and import the alcohol sales data for Ames only: 
+
+  a. Go to https://data.iowa.gov/Sales-Distribution/2019-Iowa-Liquor-Sales/38x4-vs5h
+  b. Click Filter -- Filter -- Go advanced now
+  c. Add a New Filter Condition: City is Ames.
+  d. Export -- CSV -- Download
+  e. Use `readr::read_csv` to import.
+```{r}
+dat = readr::read_csv("2019_Iowa_Liquor_Sales.csv")
+```
+
+  
+2. Data cleaning: 
+  a. extract geographic latitude and longitude from the variable `Store Location`
+  b. make sure the variables are in the correct type, by converting incorrect variable types.
+  c. extract year, month and day from the variable `Date` as separate columns.
+  
+```{r}
+dat = dat %>%
+  separate(col="Store Location", into=c("Point", "Longitude", "Latitude"), sep=" ") %>%
+  subset(select = -c(Point))
+dat$Longitude = gsub("\\(","",dat$Longitude)
+dat$Latitude = gsub("\\)","",dat$Latitude)
+dat$Longitude = as.numeric(dat$Longitude)
+dat$Latitude = as.numeric(dat$Latitude)
+dat$Date = mdy(dat$Date)
+dat$Month = month(dat$Date)
+dat$Day = day(dat$Date)
+dat$Year = year(dat$Date)
+```
+3. First overview:
+  a. Plot a scatterplot of lat and long of store locations. 
+  b. Provide a visual breakdown of the liquor category (by `Category Name`). Include volume sold in the breakdown.
+4. Find the daily sales liquor sales in Ames in 2019. Summarize the number of sales, volume of liquor sold, and amount of money spent.
+5. Plot volume sold by day (use a scatterplot of volume by day and facet by month). Discover trends with the help of `geom_smooth`. Describe any patterns.
+6. Find the dates for ISU football home games in Fall 2019. Can you see a pattern? 
+
+Note: your submission is supposed to be fully reproducible, i.e. the TA and I will 'knit' your submission in RStudio. 
