@@ -89,6 +89,11 @@ dat %>%
 dat %>%
   group_by(Date) %>%
   summarize("Volume Sold (Gallons)" = sum(`Volume Sold (Gallons)`)) %>%
+  ggplot(aes(x= day(Date), y = `Volume Sold (Gallons)`)) + facet_wrap(~month(Date, label = TRUE)) + geom_point() + labs(x = "Day of Month", title = "2019 Liquor Sales in Ames, IA")
+
+dat %>%
+  group_by(Date) %>%
+  summarize("Volume Sold (Gallons)" = sum(`Volume Sold (Gallons)`)) %>%
   ungroup() %>%
   complete(Date = seq.Date(mdy('01-01-2019'), max(Date), by="day")) %>%
   mutate(`Volume Sold (Gallons)` = replace_na(`Volume Sold (Gallons)`, 0)) %>%
