@@ -6,9 +6,11 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, message = FALSE)
-library(tidyr)
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+library(tidyverse)
+library(dplyr)
 library(lubridate)
+library(forcats)
 ```
 
 ## Liquor Sales in Iowa
@@ -43,15 +45,83 @@ dat$Latitude = gsub("\\)","",dat$Latitude)
 dat$Longitude = as.numeric(dat$Longitude)
 dat$Latitude = as.numeric(dat$Latitude)
 dat$Date = mdy(dat$Date)
-dat$Month = month(dat$Date)
+dat$Month = month(dat$Date, label = TRUE)
 dat$Day = day(dat$Date)
 dat$Year = year(dat$Date)
+dat$`Category Name` = as.factor(dat$`Category Name`)
+dat$`Category Name` = dat$`Category Name` %>%
+  fct_collapse("American Distilled Spirit Specialty" = c("American Distilled Spirit Specialty","American Distilled Spirits Specialty")) %>%
+  fct_collapse("American Vodkas" = c("American Vodka","American Vodkas")) %>%
+  fct_collapse("Cocktails/RTD" = c("Cocktails / RTD","Cocktails /RTD")) %>%
+  fct_collapse("Imported Cordials & Liqueurs" = c("Imported Cordials & Liqueur","Imported Cordials & Liqueurs")) %>%
+  fct_collapse("Imported Distilled Spirit Specialty" = c("Imported Distilled Spirit Specialty","Imported Distilled Spirits Specialty")) %>%
+  fct_collapse("Imported Vodkas" = c("Imported Vodka","Imported Vodkas")) %>%
+  fct_collapse("Temporary & Specialty Packages" = c("Temporary &  Specialty Packages","Temporary & Specialty Packages"))
 ```
+
 3. First overview:
   a. Plot a scatterplot of lat and long of store locations. 
+```{r}
+dat %>%
+  ggplot(aes(x=Longitude, y = Latitude)) + geom_point() + labs(title= "2019 Liquor Store locations in Ames, IA", x = "Longitude (Degrees)", y = "Latitude (Degrees)")
+```
+  
   b. Provide a visual breakdown of the liquor category (by `Category Name`). Include volume sold in the breakdown.
+```{r}
+dat %>%
+  drop_na(`Category Name`) %>%
+  group_by(`Category Name`) %>%
+  summarize("Volume Sold (Gallons)" = sum(`Volume Sold (Gallons)`)) %>%
+  ggplot(aes(y = `Volume Sold (Gallons)`, x = fct_rev(`Category Name`))) + geom_col() + coord_flip() + labs(x = 'Liquor Category', title = '2019 Liquor Sales in Ames, IA ')
+```
+
 4. Find the daily sales liquor sales in Ames in 2019. Summarize the number of sales, volume of liquor sold, and amount of money spent.
+```{r}
+dat %>%
+  group_by(Date) %>%
+  summarize("Number of Sales" = n(),
+            "Volume Sold (Gallons)" = sum(`Volume Sold (Gallons)`),
+            "Amount of Money Spent" = sum(`Sale (Dollars)`))
+```
+
 5. Plot volume sold by day (use a scatterplot of volume by day and facet by month). Discover trends with the help of `geom_smooth`. Describe any patterns.
-6. Find the dates for ISU football home games in Fall 2019. Can you see a pattern? 
+```{r}
+dat %>%
+  group_by(Date) %>%
+  summarize("Volume Sold (Gallons)" = sum(`Volume Sold (Gallons)`)) %>%
+  ungroup() %>%
+  complete(Date = seq.Date(mdy('01-01-2019'), max(Date), by="day")) %>%
+  mutate(`Volume Sold (Gallons)` = replace_na(`Volume Sold (Gallons)`, 0)) %>%
+  ggplot(aes(x= day(Date), y = `Volume Sold (Gallons)`)) + facet_wrap(~month(Date, label = TRUE)) + geom_smooth(span = 0.22) + labs(x = "Day of Month", title = "2019 Liquor Sales in Ames, IA")
+```
+
+To obtain a more accurate geom_smooth() line, I first filled in every missing date from the original dataset to have a total volume sold of 0 gallons, since in this case missing dates can be interpreted as zero sales made that day (at least from the data available). After this is done, it is clear to see that the trend is four or 5 evenly spaced spikes in volume of liquor sold each month. Looking closer, we see that these spikes occur weekly, with the peak usually occurring on a Wednesday or Thursday and falling back close to 0 on the other days of the week.
+
+6. Find the dates for ISU football home games in Fall 2019. Can you see a pattern?
+
+The following were the 2019 ISU football home game dates:
+
+  * August 31, 2019 against UNI
+  * September 14, 2019 against Iowa
+  * September 21, 2019 against Louisiana-Monroe
+  * October 5, 2019 against TCU
+  * October 26, 2019 against Oklahoma State
+  * November 16, 2019 against Texas
+  * November 23, 2019 against Kansas
+  
+  Before some of the Saturday ISU home football games in 2019, we see a higher than normal Wednesday/Thursday spike in volume of liquor sold. The Wednesday/Thursday spike before the following games were all higher than the normal Wednesday/Thursday spikes:
+  
+  * August 31, 2019 against UNI
+  * September 14, 2019 against Iowa
+  * November 16, 2019 against Texas
+  
+  It is interesting to notice, however, that the Wednesday/Thursday spike before the following games were entirely average:
+  
+  * September 21, 2019 against Louisiana-Monroe
+  * October 5, 2019 against TCU
+  * October 26, 2019 against Oklahoma State
+  * November 23, 2019 against Kansas
+  
+  This can be explained by realizing that the UNI game (season-opener), Iowa game (in-state rival), and Texas game (traditionally good team) were all more important games than the games against Louisiana-Monroe, TCU, Oklahoma State, and Kansas. If we had the attendace data from each game, we would expect to see larger attendance at the more important games (UNI, Iowa, Texas), and this is reflected in the larger volumes of liquor sold before these important home football game weekends. Ultimately, we can conclude that people buy more liquor (by volume) in Ames, IA before important home football games.
 
 Note: your submission is supposed to be fully reproducible, i.e. the TA and I will 'knit' your submission in RStudio. 
